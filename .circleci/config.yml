@@ -33,6 +33,8 @@ commands:
             #  exit 1
             cd backend
             npm run migrations:revert
+            cd frontend
+            npm run migrations:revert
             fi
             
 jobs:
@@ -153,18 +155,18 @@ jobs:
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
-              #--tags project=your-tag \
-              # --stack-name "your back-end stack name with workflow id" \
-              # --parameter-overrides ID="your workflow id"  
-              exit 1
+              --tags project=autodeploy \
+              --stack-name backend-${CIRCLE_WORKFLOW_ID} \
+              --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"  
+              # exit 1
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              #--tags project=your-tag \
-              # --stack-name "your front-end stack name with workflow id" \
-              # --parameter-overrides ID="your workflow id"  
+              --tags project=autodeploy \
+              --stack-name frontend-${CIRCLE_WORKFLOW_ID} \
+              --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"
               exit 1
       - run:
           name: Add back-end ip to ansible inventory
@@ -186,8 +188,13 @@ jobs:
       - image: python:3.7-alpine3.11
     steps:
       # Checkout code from git
+      - checkout
       # Add ssh keys with fingerprint
+      - add_ssh_keys:
+          fingerprints: [8e:ff:12:ec:21:cc:9d:c9:48:dd:6b:69:06:c7:bd:80]
       # attach workspace
+      - attach_workspace:
+          at: ~/
       - run:
           name: Install dependencies
           command: |
@@ -252,7 +259,11 @@ jobs:
       # Checkout code from git
       - checkout
       # Add ssh keys with fingerprint
+      - add_ssh_keys:
+          fingerprints: [8e:ff:12:ec:21:cc:9d:c9:48:dd:6b:69:06:c7:bd:80]
       # attach workspace
+      - attach_workspace:
+          at: ~/
       - run:
           name: Install dependencies
           command: |
