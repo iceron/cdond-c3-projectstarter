@@ -3,7 +3,7 @@ version: 2.1
 commands:
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
-    parameters:
+    # parameters:
       # Add parameter here   
     steps:
       - run:
@@ -11,11 +11,12 @@ commands:
           when: on_fail
           command: |
             # Your code here
-            exit 1
+            # exit 1
+            aws cloudformation delete-stack --stack-name prod-${CIRCLE_WORKFLOW_ID}
 
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
-    parameters:
+    # parameters:
       # Add parameter here     
     steps:
       - run:
@@ -26,10 +27,12 @@ commands:
             SUCCESS = 1
             if(( $SUCCESS==1 )); 
             then
-            #  cd ~/project/backend
-            #  npm install
+            cd ~/project/backend
+            npm install
             #  Add revert code here. You can find this in the Getting Started section.
-              exit 1
+            #  exit 1
+            cd backend
+            npm run migrations:revert
             fi
             
 jobs:
@@ -45,6 +48,7 @@ jobs:
           command: |
             # Your code here
             # exit 1
+            cd frontend
             npm run build
       - save_cache:
           paths: [frontend/node_modules]
@@ -62,6 +66,7 @@ jobs:
           command: |
              # Your code here
              # exit 1
+             cd backend
              npm run build
       - save_cache:
           paths: [backend/node_modules]
@@ -70,25 +75,46 @@ jobs:
   test-frontend:
     docker:
       # Docker image here
+      - image: circleci/node:10.16.3
+      - image: mongo:4.2.0
     steps:
       # Checkout code from git
+      - checkout
       # Restore from cache
+      - restore_cache:
+          key: dependency-cache-{{ checksum "package-lock.json" }}
       # Your job code here
-                
+      - run:
+          name: test
+          command: |
+            cd frontend
+            npm test
   test-backend:
     docker:
-      # Docker image here
+      - image: circleci/node:10.16.3
+      - image: mongo:4.2.0
     steps:
       # Checkout code from git
+      - checkout
       # Restore from cache
+      - restore_cache:
+          key: dependency-cache-{{ checksum "package-lock.json" }}
       # Your job code here
-            
+      - run:
+          name: test
+          command: |
+            cd backend
+            npm test 
   scan-frontend:
     docker:
+      # Docker image here
       - image: circleci/node:13.8.0
     steps:
       # Checkout code from git
+      - checkout
       # Restore from cache
+      - restore_cache:
+          key: dependency-cache-{{ checksum "package-lock.json" }}
       # Your job code here
       - run:
           name: Back-end build
@@ -100,9 +126,13 @@ jobs:
   scan-backend:
     docker:
       # Docker image here
+      - image: circleci/node:13.8.0
     steps:
       # Checkout code from git
+      - checkout
       # Restore from cache
+      - restore_cache:
+          key: dependency-cache-{{ checksum "package-lock.json" }}
       # Your job code here
       - run:
           name: Back-end build
@@ -115,8 +145,9 @@ jobs:
   deploy-infrastructure:
     docker:
       # Docker image here that supports AWS CLI
+      - image: amazon/aws-cli
     steps:
-      # Checkout code from git
+      - checkout
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -139,7 +170,11 @@ jobs:
           name: Add back-end ip to ansible inventory
           command: |
             # Your code here
-            exit 1
+            # exit 1
+            aws cloudformation deploy \
+            --template-file cloudfront.yml \
+            --stack-name cloudfront \
+            --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"
       - persist_to_workspace:
           root: ~/
           paths:
@@ -148,7 +183,7 @@ jobs:
 
   configure-infrastructure:
     docker:
-      # Docker image here that supports Ansible
+      - image: python:3.7-alpine3.11
     steps:
       # Checkout code from git
       # Add ssh keys with fingerprint
@@ -157,19 +192,23 @@ jobs:
           name: Install dependencies
           command: |
             # Your code here
-            exit 1
+            # exit 1
+            apk add --update ansible
       - run:
           name: Configure server
           command: |
             # Your code here
-            exit 1
+            # exit 1
+            ansible-playbook -i inventory.txt playbook.yml
       # Here's where you will add some code to rollback on failure      
 
   run-migrations:
     docker:
       # Docker image here that supports NodeJS
+      - image: circleci/node:13.8.0
     steps:
       # Checkout code from git
+      - checkout
       - run:
           name: Run migrations
           command: |
@@ -185,8 +224,10 @@ jobs:
   deploy-frontend:
     docker:
       # Docker image here that supports AWS CLI
+      - image: amazon/aws-cli
     steps:
       # Checkout code from git
+      - checkout
       - run:
           name: Install dependencies
           command: |
@@ -206,8 +247,10 @@ jobs:
   deploy-backend:
     docker:
       # Docker image here that supports Ansible
+      - image: python:3.7-alpine3.11
     steps:
       # Checkout code from git
+      - checkout
       # Add ssh keys with fingerprint
       # attach workspace
       - run:
@@ -223,8 +266,10 @@ jobs:
   smoke-test:
     docker:
       # Lightweight Docker image 
+      - image: alpine:latest
     steps:
       # Checkout code from git
+      - checkout
       - run:
           name: Install dependencies
           command: |
@@ -246,8 +291,10 @@ jobs:
   cloudfront-update:
     docker:
       # Docker image here that supports AWS CLI
+      - image: amazon/aws-cli
     steps:
       # Checkout code from git
+      - checkout
       - run:
           name: Install dependencies
           command: |
@@ -258,24 +305,26 @@ jobs:
             # your code here
       # Here's where you will add some code to rollback on failure  
 
-cleanup:
-    docker:
-      # Docker image here
-    steps:
-      # Checkout code from git
-      - run:
-          name: Get old stack workflow id
-          command: |
-            # your code here
-            export OldWorkflowID="the id here"
-            export STACKS=[] #put the list of stacks here
-      - run:
-          name: Remove old stacks and files
-          command: |
-            if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
-            then
+  cleanup:
+      docker:
+        # Docker image here
+        - image: alpine:latest
+      steps:
+        # Checkout code from git
+        - checkout
+        - run:
+            name: Get old stack workflow id
+            command: |
               # your code here
-            fi
+              export OldWorkflowID="the id here"
+              export STACKS=[] #put the list of stacks here
+        - run:
+            name: Remove old stacks and files
+            command: |
+              if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
+              then
+                # your code here
+              fi
             
 
 workflows:
