@@ -167,7 +167,7 @@ jobs:
             --template-file .circleci/files/backend.yml \
             --tags project=autodeploy \
             --stack-name backend-${CIRCLE_WORKFLOW_ID} \
-            --region us-east-1
+            --region us-east-1 \
             --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"                
             # exit 1
       - run:
@@ -177,7 +177,7 @@ jobs:
             --template-file .circleci/files/frontend.yml \
             --tags project=autodeploy \
             --stack-name frontend-${CIRCLE_WORKFLOW_ID} \
-            --region us-east-1
+            --region us-east-1 \
             --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"
       - run:
           name: Add back-end ip to ansible inventory
@@ -187,7 +187,7 @@ jobs:
             aws cloudformation deploy \            
             --template-file cloudfront.yml \
             --stack-name cloudfront \
-            --region us-east-1
+            --region us-east-1 \
             --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"
             
       - persist_to_workspace:
