@@ -167,18 +167,18 @@ jobs:
               --template-file .circleci/files/backend.yml \
               --stack-name backend-"${CIRCLE_WORKFLOW_ID}" \
               --region "${AWS_DEFAULT_REGION}"
-              # --tags project=cloudfront \
-              # --parameter-overrides ID="${CIRCLE_WORKFLOW_ID}" \
+              --tags project=cloudfront \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID}" \
               # exit 1
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --stack-name frontend-${CIRCLE_WORKFLOW_ID} \
+              --stack-name frontend-"${CIRCLE_WORKFLOW_ID}" \
               --tags project=cloudfront \
               --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}" \
-              --region ${AWS_DEFAULT_REGION}
+              --region "${AWS_DEFAULT_REGION}"
       - run:
           name: Add back-end ip to ansible inventory
           command: |
@@ -188,7 +188,7 @@ jobs:
               --template-file cloudfront.yml \
               --stack-name cloudfront \
               --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}" \
-              --region ${AWS_DEFAULT_REGION}
+              --region "${AWS_DEFAULT_REGION}"
       - persist_to_workspace:
           root: ~/
           paths:
@@ -212,7 +212,16 @@ jobs:
           command: |
             # Your code here
             # exit 1
+            sudo apt-get update && sudo apt-get upgrade -y
+            sudo apt install build-essential
+            sudo apt install nodejs
+            npm install pm2 -g
             apk add --update ansible
+            useradd -s /bin/bash -m -d /home/safeuser -c "ubuntu" ubuntu
+            passwd ubuntu
+            echo "ubuntu"
+            echo "ubuntu"
+            usermod -aG sudo ubuntu
       - run:
           name: Configure server
           command: |
