@@ -164,21 +164,21 @@ jobs:
           name: Ensure back-end infrastructure exists
           command: |
             aws cloudformation deploy \            
-            --template-file .circleci/files/backend.yml \
-            --tags project=autodeploy \
-            --stack-name backend-${CIRCLE_WORKFLOW_ID} \
-            --region us-east-1 \
-            --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"                
+            --template-file .circleci/files/backend.yml \            
+            --stack-name backend-${CIRCLE_WORKFLOW_ID} \     
+            --tags project=autodeploy \       
+            --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}" \ 
+            --region us-east-1
             # exit 1
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \            
-            --template-file .circleci/files/frontend.yml \
-            --tags project=autodeploy \
+            --template-file .circleci/files/frontend.yml \            
             --stack-name frontend-${CIRCLE_WORKFLOW_ID} \
-            --region us-east-1 \
-            --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"
+            --tags project=autodeploy \            
+            --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}" \
+            --region us-east-1
       - run:
           name: Add back-end ip to ansible inventory
           command: |
@@ -186,10 +186,9 @@ jobs:
             # exit 1
             aws cloudformation deploy \            
             --template-file cloudfront.yml \
-            --stack-name cloudfront \
-            --region us-east-1 \
-            --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}"
-            
+            --stack-name cloudfront \            
+            --parameter-overrides PipelineID="${CIRCLE_WORKFLOW_ID}" \
+            --region us-east-1
       - persist_to_workspace:
           root: ~/
           paths:
